@@ -11,6 +11,7 @@ async function getData() {
   const carsDataReq = await fetch(
     "https://storage.googleapis.com/tfjs-tutorials/carsData.json"
   );
+
   const carsData = await carsDataReq.json();
   const cleaned = carsData
     .map((car) => ({
