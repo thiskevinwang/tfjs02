@@ -1,5 +1,8 @@
 console.log("Hello TensorFlow");
 
+import * as tf from "@tensorflow/tfjs";
+import * as tfvis from "@tensorflow/tfjs-vis";
+
 /**
  * Get the car data reduced to just the variables we are interested
  * and cleaned of missing data.
