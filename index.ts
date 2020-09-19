@@ -1,5 +1,24 @@
 console.log("Hello TensorFlow");
 
+import * as tf from "@tensorflow/tfjs";
+import * as tfvis from "@tensorflow/tfjs-vis";
+
+interface Car {
+  Acceleration: number; // 12
+  Cylinders: number; // 8
+  Displacement: number; // 307
+  Horsepower: number; // 130
+  Miles_per_Gallon: number; // 18
+  Name: string; // "chevrolet chevelle malibu"
+  Origin: string; // "USA"
+  Weight_in_lbs: number; // 3504
+  Year: string; // "1970-01-01"
+}
+
+interface Data {
+  mpg: number;
+  horsepower: number;
+}
 /**
  * Get the car data reduced to just the variables we are interested
  * and cleaned of missing data.
@@ -8,8 +27,9 @@ async function getData() {
   const carsDataReq = await fetch(
     "https://storage.googleapis.com/tfjs-tutorials/carsData.json"
   );
-  const carsData = await carsDataReq.json();
-  const cleaned = carsData
+
+  const carsData: Car[] = await carsDataReq.json();
+  const cleaned: Data[] = carsData
     .map((car) => ({
       mpg: car.Miles_per_Gallon,
       horsepower: car.Horsepower,
@@ -23,20 +43,21 @@ async function getData() {
  * Define your model architecture
  * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#3
  */
-function createModel() {
-  /**
-   * Instantiate a sequential model
-   * @type {tf.model}
-   */
+function createModel(): tf.Sequential {
   const model = tf.sequential();
 
-  // Add a single input layer
+  // Adds a layer instance on top of the layer stack.
   model.add(tf.layers.dense({ inputShape: [1], units: 1, useBias: true }));
 
   // Add an output layer
   model.add(tf.layers.dense({ units: 1, useBias: true }));
 
   return model;
+}
+
+interface Data {
+  mpg: number;
+  horsepower: number;
 }
 
 async function run() {
@@ -79,11 +100,18 @@ async function run() {
 
 document.addEventListener("DOMContentLoaded", run);
 
+interface TensorData {
+  inputs: tf.Tensor<tf.Rank>;
+  labels: tf.Tensor<tf.Rank>;
+  inputMax: tf.Tensor<tf.Rank>;
+  inputMin: tf.Tensor<tf.Rank>;
+  labelMax: tf.Tensor<tf.Rank>;
+  labelMin: tf.Tensor<tf.Rank>;
+}
 /**
  * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#4
- * @param {*} data
  */
-function convertToTensor(data) {
+function convertToTensor(data: Data[]): TensorData {
   // Wrapping these calculations in a tidy will dispose any
   // intermediate tensors.
 
@@ -92,11 +120,11 @@ function convertToTensor(data) {
     tf.util.shuffle(data);
 
     // Step 2. Convert data to Tensor
-    const inputs = data.map((d) => d.horsepower);
-    const labels = data.map((d) => d.mpg);
+    const inputs: number[] = data.map((d) => d.horsepower);
+    const labels: number[] = data.map((d) => d.mpg);
 
-    const inputTensor = tf.tensor2d(inputs, [inputs.length, 1]);
-    const labelTensor = tf.tensor2d(labels, [labels.length, 1]);
+    const inputTensor: tf.Tensor2D = tf.tensor2d(inputs, [inputs.length, 1]);
+    const labelTensor: tf.Tensor2D = tf.tensor2d(labels, [labels.length, 1]);
 
     // Step 3. Normalize the data to the range 0 - 1 using min-max scaling
     const inputMax = inputTensor.max();
@@ -123,13 +151,11 @@ function convertToTensor(data) {
   });
 }
 
-/**
- *
- * @param {*} model
- * @param {*} inputs
- * @param {*} labels
- */
-async function trainModel(model, inputs, labels) {
+async function trainModel(
+  model: tf.Sequential,
+  inputs: tf.Tensor<tf.Rank>,
+  labels: tf.Tensor<tf.Rank>
+) {
   /**
    * Prepare the model for training...
    * We have to ‘compile' the model before we train it. To do so, we have to specify a number of very important things:
@@ -140,7 +166,8 @@ async function trainModel(model, inputs, labels) {
      * There are many optimizers available in TensorFlow.js.
      * Here we have picked the adam optimizer as it is quite effective in practice and requires no configuration.
      */
-    optimizer: tf.train.adam(),
+    // optimizer: tf.train.adam(),
+    optimizer: tf.train.sgd(0.01),
     /**
      * `loss`: this is a **function** that will tell the model how well it is doing on learning each of the batches
      * (data subsets) that it is shown.
@@ -179,11 +206,12 @@ async function trainModel(model, inputs, labels) {
 
 /**
  * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#6
- * @param {*} model
- * @param {*} inputData
- * @param {*} normalizationData
  */
-function testModel(model, inputData, normalizationData) {
+function testModel(
+  model: tf.Sequential,
+  inputData: Data[],
+  normalizationData: TensorData
+) {
   const { inputMax, inputMin, labelMin, labelMax } = normalizationData;
 
   // Generate predictions for a uniform range of numbers between 0 and 1;
@@ -194,7 +222,7 @@ function testModel(model, inputData, normalizationData) {
     // Model.predict is how we feed those examples into the model.
     // Note that they need to have a similar shape ([num_examples, num_features_per_example]) as when we did training.
     const xs = tf.linspace(0, 1, 100);
-    const preds = model.predict(xs.reshape([100, 1]));
+    const preds = model.predict(xs.reshape([100, 1])) as tf.Tensor<tf.Rank>;
 
     const unNormXs = xs.mul(inputMax.sub(inputMin)).add(inputMin);
 
