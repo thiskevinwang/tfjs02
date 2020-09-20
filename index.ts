@@ -80,7 +80,18 @@ async function run() {
 
   // More code will be added below
   // Create the model
-  let model = createModel();
+  let model: tf.LayersModel;
+
+  try {
+    console.log("Loading model from localstorage://my-model-1");
+    model = await tf.loadLayersModel("localstorage://my-model-1");
+    console.log("Loaded my-model-1");
+  } catch (err) {
+    console.log("err", err);
+    console.log("Creating new model");
+    model = createModel();
+  }
+
   tfvis.show.modelSummary({ name: "Model Summary" }, model);
 
   /**
@@ -91,11 +102,18 @@ async function run() {
   const { inputs, labels } = tensorData;
 
   // Train the model
+  console.log("Start Training");
   await trainModel(model, inputs, labels);
   console.log("Done Training");
 
   // Make some predictions using the model and compare them to the original data
+  console.log("Start Testing");
   testModel(model, data, tensorData);
+  console.log("Done Testing");
+
+  console.log("Saving model to 'localstorage://my-model-1'");
+  const saveResult = await model.save("localstorage://my-model-1");
+  console.log("Model saved", saveResult);
 }
 
 document.addEventListener("DOMContentLoaded", run);
@@ -152,7 +170,7 @@ function convertToTensor(data: Data[]): TensorData {
 }
 
 async function trainModel(
-  model: tf.Sequential,
+  model: tf.LayersModel,
   inputs: tf.Tensor<tf.Rank>,
   labels: tf.Tensor<tf.Rank>
 ) {
@@ -208,7 +226,7 @@ async function trainModel(
  * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#6
  */
 function testModel(
-  model: tf.Sequential,
+  model: tf.LayersModel,
   inputData: Data[],
   normalizationData: TensorData
 ) {
