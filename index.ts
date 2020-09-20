@@ -15,10 +15,16 @@ interface Car {
   Year: string; // "1970-01-01"
 }
 
-interface Data {
+interface CleanedData {
   mpg: number;
   horsepower: number;
 }
+
+interface CleanedData {
+  mpg: number;
+  horsepower: number;
+}
+
 /**
  * Get the car data reduced to just the variables we are interested
  * and cleaned of missing data.
@@ -29,7 +35,7 @@ async function getData() {
   );
 
   const carsData: Car[] = await carsDataReq.json();
-  const cleaned: Data[] = carsData
+  const cleaned: CleanedData[] = carsData
     .map((car) => ({
       mpg: car.Miles_per_Gallon,
       horsepower: car.Horsepower,
@@ -43,21 +49,25 @@ async function getData() {
  * Define your model architecture
  * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#3
  */
-function createModel(): tf.Sequential {
-  const model = tf.sequential();
+async function getOrCreateModel(): Promise<tf.LayersModel> {
+  let model;
 
-  // Adds a layer instance on top of the layer stack.
-  model.add(tf.layers.dense({ inputShape: [1], units: 1, useBias: true }));
+  try {
+    console.log("Loading model from localstorage://my-model-1");
+    model = await tf.loadLayersModel("localstorage://my-model-1");
+    console.log("Loaded my-model-1");
+  } catch (err) {
+    console.log("err", err);
+    console.log("Creating new model");
+    model = tf.sequential();
+    // Adds a layer instance on top of the layer stack.
+    model.add(tf.layers.dense({ inputShape: [1], units: 1, useBias: true }));
 
-  // Add an output layer
-  model.add(tf.layers.dense({ units: 1, useBias: true }));
+    // Add an output layer
+    model.add(tf.layers.dense({ units: 1, useBias: true }));
+  }
 
   return model;
-}
-
-interface Data {
-  mpg: number;
-  horsepower: number;
 }
 
 async function run() {
@@ -78,20 +88,7 @@ async function run() {
     }
   );
 
-  // More code will be added below
-  // Create the model
-  let model: tf.LayersModel;
-
-  try {
-    console.log("Loading model from localstorage://my-model-1");
-    model = await tf.loadLayersModel("localstorage://my-model-1");
-    console.log("Loaded my-model-1");
-  } catch (err) {
-    console.log("err", err);
-    console.log("Creating new model");
-    model = createModel();
-  }
-
+  const model = await getOrCreateModel();
   tfvis.show.modelSummary({ name: "Model Summary" }, model);
 
   /**
@@ -129,7 +126,7 @@ interface TensorData {
 /**
  * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#4
  */
-function convertToTensor(data: Data[]): TensorData {
+function convertToTensor(data: CleanedData[]): TensorData {
   // Wrapping these calculations in a tidy will dispose any
   // intermediate tensors.
 
@@ -227,7 +224,7 @@ async function trainModel(
  */
 function testModel(
   model: tf.LayersModel,
-  inputData: Data[],
+  inputData: CleanedData[],
   normalizationData: TensorData
 ) {
   const { inputMax, inputMin, labelMin, labelMax } = normalizationData;
