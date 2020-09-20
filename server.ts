@@ -4,8 +4,8 @@ import * as tf from "@tensorflow/tfjs";
 import * as tfn from "@tensorflow/tfjs-node";
 import fetch from "node-fetch";
 
-const loadHandler = tfn.io.fileSystem("./models/model.json");
-const saveHandler = tfn.io.fileSystem("./models");
+const loadHandler = tfn.io.fileSystem("./my-model/model.json");
+const saveHandler = tfn.io.fileSystem("./my-model");
 
 interface Car {
   Acceleration: number; // 12
