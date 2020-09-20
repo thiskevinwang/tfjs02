@@ -2,7 +2,21 @@
 
 ## Findings
 
-### Server
+### Browser Code
+
+This uses `webpack`
+
+```sh
+npm run start
+```
+
+### Server Code
+
+This uses `tsc` & `node`
+
+```sh
+npm run dev
+```
 
 ### Errors
 
