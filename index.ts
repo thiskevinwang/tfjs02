@@ -59,12 +59,14 @@ async function getOrCreateModel(): Promise<tf.LayersModel> {
   } catch (err) {
     console.log("err", err);
     console.log("Creating new model");
-    model = tf.sequential();
-    // Adds a layer instance on top of the layer stack.
-    model.add(tf.layers.dense({ inputShape: [1], units: 1, useBias: true }));
-
-    // Add an output layer
-    model.add(tf.layers.dense({ units: 1, useBias: true }));
+    model = tf.sequential({
+      layers: [
+        tf.layers.dense({ inputShape: [1], units: 64, activation: "relu" }),
+        tf.layers.dense({ units: 64, activation: "relu" }),
+        tf.layers.dropout({ rate: 0.2 }),
+        tf.layers.dense({ units: 1 }),
+      ],
+    });
   }
 
   return model;
@@ -181,8 +183,8 @@ async function trainModel(
      * There are many optimizers available in TensorFlow.js.
      * Here we have picked the adam optimizer as it is quite effective in practice and requires no configuration.
      */
-    // optimizer: tf.train.adam(),
-    optimizer: tf.train.sgd(0.01),
+    optimizer: tf.train.adam(),
+    // optimizer: tf.train.sgd(0.01),
     /**
      * `loss`: this is a **function** that will tell the model how well it is doing on learning each of the batches
      * (data subsets) that it is shown.
@@ -205,7 +207,7 @@ async function trainModel(
    * `epochs` refers to the number of times the model is going to look at the entire dataset that you provide it.
    * Here we will take 50 iterations through the dataset.
    */
-  const epochs = 50;
+  const epochs = 60;
 
   return await model.fit(inputs, labels, {
     batchSize,
