@@ -1,40 +1,34 @@
-console.log("Hello TensorFlow");
+console.log("%cTensorFlow", "color:rebeccapurple; font-size:50px");
 
 import * as tf from "@tensorflow/tfjs";
 import * as tfvis from "@tensorflow/tfjs-vis";
 
-interface Car {
-  Acceleration: number; // 12
-  Cylinders: number; // 8
-  Displacement: number; // 307
-  Horsepower: number; // 130
-  Miles_per_Gallon: number; // 18
-  Name: string; // "chevrolet chevelle malibu"
-  Origin: string; // "USA"
-  Weight_in_lbs: number; // 3504
-  Year: string; // "1970-01-01"
+import type { Car, CleanedData, TensorData } from "./types";
+
+enum Tabs {
+  DATA = "Data",
+  MODEL = "Model",
+  TRAINING = "Training",
+  RESULT = "Result",
 }
 
-interface CleanedData {
-  mpg: number;
-  horsepower: number;
-}
-
-interface CleanedData {
-  mpg: number;
-  horsepower: number;
-}
+const MODEL_PATH = "localstorage://my-model-1";
 
 /**
  * Get the car data reduced to just the variables we are interested
  * and cleaned of missing data.
  */
 async function getData() {
+  console.group("getData");
+  console.log("⏳ Fetching Data");
   const carsDataReq = await fetch(
     "https://storage.googleapis.com/tfjs-tutorials/carsData.json"
   );
+  console.log(carsDataReq);
 
   const carsData: Car[] = await carsDataReq.json();
+
+  console.log("Cleaning");
   const cleaned: CleanedData[] = carsData
     .map((car) => ({
       mpg: car.Miles_per_Gallon,
@@ -42,6 +36,8 @@ async function getData() {
     }))
     .filter((car) => car.mpg != null && car.horsepower != null);
 
+  console.log(cleaned);
+  console.groupEnd();
   return cleaned;
 }
 
@@ -49,13 +45,14 @@ async function getData() {
  * Define your model architecture
  * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#3
  */
-async function getOrCreateModel(): Promise<tf.LayersModel> {
+async function getOrCreateModel() {
+  console.group("getOrCreateModel");
   let model;
 
   try {
-    console.log("Loading model from localstorage://my-model-1");
-    model = await tf.loadLayersModel("localstorage://my-model-1");
-    console.log("Loaded my-model-1");
+    console.log(`⏳ Loading model from ${MODEL_PATH}`);
+    model = await tf.loadLayersModel(MODEL_PATH);
+    console.log("✅ Model Loaded");
   } catch (err) {
     console.log("err", err);
     console.log("Creating new model");
@@ -68,63 +65,10 @@ async function getOrCreateModel(): Promise<tf.LayersModel> {
       ],
     });
   }
-
+  console.groupEnd();
   return model;
 }
 
-async function run() {
-  // Load and plot the original input data that we are going to train on.
-  const data = await getData();
-  const values = data.map((d) => ({
-    x: d.horsepower,
-    y: d.mpg,
-  }));
-
-  tfvis.render.scatterplot(
-    { name: "Horsepower v MPG" },
-    { values },
-    {
-      xLabel: "Horsepower",
-      yLabel: "MPG",
-      height: 300,
-    }
-  );
-
-  const model = await getOrCreateModel();
-  tfvis.show.modelSummary({ name: "Model Summary" }, model);
-
-  /**
-   * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#5
-   */
-  // Convert the data to a form we can use for training.
-  const tensorData = convertToTensor(data);
-  const { inputs, labels } = tensorData;
-
-  // Train the model
-  console.log("Start Training");
-  await trainModel(model, inputs, labels);
-  console.log("Done Training");
-
-  // Make some predictions using the model and compare them to the original data
-  console.log("Start Testing");
-  testModel(model, data, tensorData);
-  console.log("Done Testing");
-
-  console.log("Saving model to 'localstorage://my-model-1'");
-  const saveResult = await model.save("localstorage://my-model-1");
-  console.log("Model saved", saveResult);
-}
-
-document.addEventListener("DOMContentLoaded", run);
-
-interface TensorData {
-  inputs: tf.Tensor<tf.Rank>;
-  labels: tf.Tensor<tf.Rank>;
-  inputMax: tf.Tensor<tf.Rank>;
-  inputMin: tf.Tensor<tf.Rank>;
-  labelMax: tf.Tensor<tf.Rank>;
-  labelMin: tf.Tensor<tf.Rank>;
-}
 /**
  * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#4
  */
@@ -132,7 +76,7 @@ function convertToTensor(data: CleanedData[]): TensorData {
   // Wrapping these calculations in a tidy will dispose any
   // intermediate tensors.
 
-  return tf.tidy(() => {
+  const tensor = tf.tidy(() => {
     // Step 1. Shuffle the data
     tf.util.shuffle(data);
 
@@ -166,6 +110,8 @@ function convertToTensor(data: CleanedData[]): TensorData {
       labelMin,
     };
   });
+
+  return tensor;
 }
 
 async function trainModel(
@@ -173,6 +119,8 @@ async function trainModel(
   inputs: tf.Tensor<tf.Rank>,
   labels: tf.Tensor<tf.Rank>
 ) {
+  console.group("trainModel");
+  console.log("⏳ Start Training");
   /**
    * Prepare the model for training...
    * We have to ‘compile' the model before we train it. To do so, we have to specify a number of very important things:
@@ -202,23 +150,28 @@ async function trainModel(
    * There isn't really an ideal batch size for all problems and it is beyond the scope of this
    * tutorial to describe the mathematical motivations for various batch sizes.
    */
-  const batchSize = 32;
+  const batchSize = 100;
   /**
    * `epochs` refers to the number of times the model is going to look at the entire dataset that you provide it.
    * Here we will take 50 iterations through the dataset.
    */
   const epochs = 60;
 
-  return await model.fit(inputs, labels, {
+  const result = await model.fit(inputs, labels, {
     batchSize,
     epochs,
     shuffle: true,
     callbacks: tfvis.show.fitCallbacks(
-      { name: "Training Performance" },
+      { name: "Training Performance", tab: Tabs.TRAINING },
       ["loss", "mse"],
       { height: 200, callbacks: ["onEpochEnd"] }
     ),
   });
+
+  console.log("✅ Done Training");
+  console.groupEnd();
+
+  return result;
 }
 
 /**
@@ -227,9 +180,10 @@ async function trainModel(
 function testModel(
   model: tf.LayersModel,
   inputData: CleanedData[],
-  normalizationData: TensorData
+  { inputMax, inputMin, labelMin, labelMax }: TensorData
 ) {
-  const { inputMax, inputMin, labelMin, labelMax } = normalizationData;
+  console.group("testModel");
+  console.log("⏳ Start Testing");
 
   // Generate predictions for a uniform range of numbers between 0 and 1;
   // We un-normalize the data by doing the inverse of the min-max scaling
@@ -259,15 +213,64 @@ function testModel(
   }));
 
   tfvis.render.scatterplot(
-    { name: "Model Predictions vs Original Data" },
+    {
+      name: "Model Predictions vs Original Data",
+      tab: Tabs.RESULT,
+    } as tfvis.Drawable,
     {
       values: [originalPoints, predictedPoints],
       series: ["original", "predicted"],
-    },
+    } as tfvis.XYPlotData,
     {
       xLabel: "Horsepower",
       yLabel: "MPG",
       height: 300,
-    }
+    } as tfvis.XYPlotOptions
   );
+
+  console.log("✅ Done Testing");
+  console.groupEnd();
 }
+
+/**
+ * # Primary function
+ */
+async function run() {
+  // Load and plot the original input data that we are going to train on.
+  const data = await getData();
+  const values = data.map((d) => ({
+    x: d.horsepower,
+    y: d.mpg,
+  }));
+
+  tfvis.render.scatterplot(
+    { name: "Horsepower v MPG", tab: Tabs.DATA } as tfvis.Drawable,
+    { values } as tfvis.XYPlotData,
+    {
+      xLabel: "Horsepower",
+      yLabel: "MPG",
+      height: 300,
+    } as tfvis.XYPlotOptions
+  );
+
+  const model = await getOrCreateModel();
+  tfvis.show.modelSummary({ name: "Model Summary", tab: Tabs.DATA }, model);
+
+  /**
+   * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#5
+   */
+  // Convert the data to a form we can use for training.
+  const tensorData = convertToTensor(data);
+  const { inputs, labels } = tensorData;
+
+  await trainModel(model, inputs, labels);
+
+  // Make some predictions using the model and compare them to the original data
+  testModel(model, data, tensorData);
+
+  console.log(`Saving model to ${MODEL_PATH}`);
+  const saveResult = await model.save(MODEL_PATH);
+  console.log("✅ Model saved", saveResult);
+}
+
+document.addEventListener("DOMContentLoaded", run);
