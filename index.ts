@@ -12,6 +12,14 @@ enum Tabs {
   RESULT = "Result",
 }
 
+/**
+ * An enum of html `id`s in `static/index.html`
+ */
+enum HtmlIds {
+  RESULT = "result",
+  INPUT = "input",
+}
+
 const MODEL_PATH = "localstorage://my-model-1";
 
 /**
@@ -227,6 +235,8 @@ function testUserInput(
   });
 
   console.groupEnd();
+
+  return milesPerGallon;
 }
 
 /**
@@ -328,12 +338,27 @@ async function run() {
     inputs
   );
 
-  // await trainModel(model, inputs, labels);
+  await trainModel(model, inputs, labels);
 
   // Make some predictions using the model and compare them to the original data
   testModel(model, data, tensorData);
   // Make a prediction on a single user input
-  testUserInput(model, 106.72, tensorData);
+
+  function handleTestUserInput(this: HTMLInputElement, ev: Event) {
+    const milesPerGallon = testUserInput(
+      model,
+      parseInt(this.value, 10),
+      tensorData
+    );
+    document.getElementById(HtmlIds.RESULT).innerHTML =
+      milesPerGallon.toString() + " MPG";
+  }
+
+  {
+    document
+      .getElementById(HtmlIds.INPUT)
+      .addEventListener("change", handleTestUserInput);
+  }
 
   console.log(`Saving model to ${MODEL_PATH}`);
   const saveResult = await model.save(MODEL_PATH);
