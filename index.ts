@@ -175,6 +175,61 @@ async function trainModel(
 }
 
 /**
+ * Make a prediction on a single user input
+ */
+function testUserInput(
+  model: tf.LayersModel,
+  /** Example: user inputs a car's horsepower. MPG will be predicted...*/
+  userInput: number, // 200
+  { inputMax, inputMin, labelMin, labelMax }: TensorData
+) {
+  console.group("testUserInput");
+  console.log(
+    `%cUser entered: %c${userInput} HP`,
+    "font-weight:bold; font-size:16px",
+    "color:lightblue; font-size:20px"
+  );
+
+  const incomingValue = tf.sub(userInput, inputMin).div(inputMax.sub(inputMin));
+  console.log(`...as a tensor, ${userInput} is`);
+  incomingValue.print(true);
+
+  // console.log("...for reference...");
+  // console.table([
+  //   { HP_normalized: 0.33, HP_actual: 106.72 },
+  //   { HP_normalized: 0.46399998664855957, HP_actual: 131.37600708007812 },
+  //   { HP_normalized: 0.89, HP_actual: 209.75 },
+  //   { HP_normalized: 1.0, HP_actual: 230 },
+  // ]);
+
+  const xs_1 = incomingValue.as1D();
+
+  console.log(
+    `%c${userInput} HP %cnormalized/.as1D() = `,
+    "color:lightblue; font-size:20px",
+    "font-weight:bold; font-size:16px"
+  );
+  xs_1.print();
+  const x_1 = xs_1.reshape([1, 1]);
+  const pred1 = model.predict(x_1) as tf.Tensor<tf.Rank>;
+
+  // Math...
+  const unNormXs_1 = xs_1.mul(inputMax.sub(inputMin)).add(inputMin);
+  const unNormPred_1 = pred1.mul(labelMax.sub(labelMin)).add(labelMin);
+
+  const horsepower = unNormXs_1.dataSync()[0];
+  const milesPerGallon = unNormPred_1.dataSync()[0];
+  console.table({
+    HP_user_input: userInput,
+    HP_normalized: x_1.dataSync()[0],
+    HP_unNormalized: horsepower,
+    MPG_prediction: milesPerGallon,
+  });
+
+  console.groupEnd();
+}
+
+/**
  * @see https://codelabs.developers.google.com/codelabs/tfjs-training-regression/index.html#6
  */
 function testModel(
@@ -190,13 +245,15 @@ function testModel(
   // that we did earlier.
   const [xs, preds] = tf.tidy(() => {
     // We generate 100 new ‘examples' to feed to the model.
+    const xs = tf.linspace(0, 1, 100);
+    const x = xs.reshape([100, 1]); // this looks like a courtesy/redundancy layer
+
     // Model.predict is how we feed those examples into the model.
     // Note that they need to have a similar shape ([num_examples, num_features_per_example]) as when we did training.
-    const xs = tf.linspace(0, 1, 100);
-    const preds = model.predict(xs.reshape([100, 1])) as tf.Tensor<tf.Rank>;
+    const preds = model.predict(x) as tf.Tensor<tf.Rank>;
 
+    // convert [0,0.5,...1,etc] => [40,65,...200,etc]
     const unNormXs = xs.mul(inputMax.sub(inputMin)).add(inputMin);
-
     const unNormPreds = preds.mul(labelMax.sub(labelMin)).add(labelMin);
 
     // Un-normalize the data
@@ -263,10 +320,20 @@ async function run() {
   const tensorData = convertToTensor(data);
   const { inputs, labels } = tensorData;
 
-  await trainModel(model, inputs, labels);
+  /**
+   * @see https://js.tensorflow.org/api_vis/latest/#show.valuesDistribution
+   */
+  await tfvis.show.valuesDistribution(
+    { name: "Inputs", tab: Tabs.DATA },
+    inputs
+  );
+
+  // await trainModel(model, inputs, labels);
 
   // Make some predictions using the model and compare them to the original data
   testModel(model, data, tensorData);
+  // Make a prediction on a single user input
+  testUserInput(model, 106.72, tensorData);
 
   console.log(`Saving model to ${MODEL_PATH}`);
   const saveResult = await model.save(MODEL_PATH);
