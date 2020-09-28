@@ -338,7 +338,7 @@ async function run() {
     inputs
   );
 
-  await trainModel(model, inputs, labels);
+  // await trainModel(model, inputs, labels);
 
   // Make some predictions using the model and compare them to the original data
   testModel(model, data, tensorData);
