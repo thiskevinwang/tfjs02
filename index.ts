@@ -3,7 +3,10 @@ console.log("%cTensorFlow", "color:rebeccapurple; font-size:50px");
 import * as tf from "@tensorflow/tfjs";
 import * as tfvis from "@tensorflow/tfjs-vis";
 
-import type { Car, CleanedData, TensorData } from "./types";
+/* @ts-ignore */
+import * as facemesh from "@tensorflow-models/facemesh";
+
+import type { Car, CleanedData, TensorData, FacePrediction } from "./types";
 
 enum Tabs {
   DATA = "Data",
@@ -18,6 +21,8 @@ enum Tabs {
 enum HtmlIds {
   RESULT = "result",
   INPUT = "input",
+  VIDEO = "video",
+  CANVAS = "canvas",
 }
 
 const MODEL_PATH = "localstorage://my-model-1";
@@ -366,3 +371,115 @@ async function run() {
 }
 
 document.addEventListener("DOMContentLoaded", run);
+
+async function main() {
+  console.group("face detect");
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    await navigator.mediaDevices
+      .getUserMedia({
+        audio: false,
+        video: {
+          facingMode: "user",
+        },
+      })
+      .then((stream) => {
+        console.log("camera is present");
+        (window as any).stream = stream;
+        const video = document.getElementById(HtmlIds.VIDEO);
+        (video as any).srcObject = stream;
+
+        return new Promise((resolve, reject) => {
+          video.onloadedmetadata = () => {
+            resolve(true);
+          };
+        });
+      });
+  }
+  // Load the MediaPipe facemesh model.
+  console.log("facemesh.load()");
+  const model = await facemesh.load();
+  console.log("facemesh.load() done");
+
+  const videoElement = document.getElementById(
+    HtmlIds.VIDEO
+  ) as HTMLVideoElement;
+
+  /**
+   * This  will get called recursively
+   */
+  const renderPredictions = async () => {
+    // Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
+    // array of detected faces from the MediaPipe graph.
+    console.log("model.estimateFaces()");
+    const predictions: FacePrediction[] = await model.estimateFaces(
+      videoElement
+    );
+    console.log("predictions", predictions);
+
+    const canvasElement = document.getElementById(
+      HtmlIds.CANVAS
+    ) as HTMLCanvasElement;
+    const ctx = canvasElement.getContext("2d");
+    console.log({ ctx });
+
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // Font options.
+    const font = "16px sans-serif";
+    ctx.font = font;
+    ctx.textBaseline = "top";
+
+    predictions.forEach((prediction, i) => {
+      console.log("drawing something for prediction", i);
+      const x = prediction.boundingBox.topLeft[0];
+      const y = prediction.boundingBox.topLeft[1];
+      const width = prediction.boundingBox.bottomRight[0] - x;
+      const height = prediction.boundingBox.bottomRight[1] - y;
+      console.log({ x, y, width, height });
+
+      // Draw the bounding box.
+      ctx.strokeStyle = "#00FFFF";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x, y, width, height);
+
+      // Draw the label background.
+      ctx.fillStyle = "#00FFFF";
+      const textWidth = ctx.measureText(`Person #${i}`).width;
+      const textHeight = parseInt(font, 10); // base 10
+      ctx.fillRect(x, y, textWidth + 4, textHeight + 4);
+    });
+
+    predictions.forEach((prediction, i) => {
+      const x = prediction.boundingBox.topLeft[0];
+      const y = prediction.boundingBox.topLeft[1];
+      // Draw the text last to ensure it's on top.
+      ctx.fillStyle = "#000000";
+      ctx.fillText(`Person #${i}`, x, y);
+    });
+
+    for (let i = 0; i < predictions.length; i++) {
+      const keypoints = predictions[i].scaledMesh;
+
+      // Log facial keypoints.
+      for (let i = 0; i < keypoints.length; i++) {
+        const [x, y, z] = keypoints[i];
+
+        ctx.fillStyle = "#990099";
+        ctx.fillRect(x, y, 3, 3);
+        console.log(`Keypoint ${i}: [${x}, ${y}, ${z}]`);
+      }
+    }
+  };
+
+  const detectFrame = (video: HTMLVideoElement, model: any) => {
+    renderPredictions();
+    requestAnimationFrame(() => {
+      detectFrame(video, model);
+    });
+  };
+  detectFrame(videoElement, model);
+
+  console.groupEnd();
+}
+
+document.addEventListener("DOMContentLoaded", main);

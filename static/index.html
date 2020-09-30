@@ -4,10 +4,28 @@
     <title>TensorFlow.js Tutorial</title>
     <!-- Import the main script file -->
     <script src="index.js"></script>
+    <style>
+      #video {
+        /* This left/top is for offset correction */
+        left: 22px;
+        top: -5px;
+        border: 1px dotted red;
+        position: absolute;
+        z-index: 0;
+      }
+      #canvas {
+        left: 0;
+        top: 0;
+        border: 1px dotted green;
+        position: absolute;
+        z-index: 1;
+      }
+    </style>
   </head>
 
   <body>
     <h1>TensorFlow</h1>
+    <!--<h2>HP to MPG</h2>
     <div>
       <label for="input">Enter your car's horsepower</label>
       <input id="input" type="number" />
@@ -15,6 +33,21 @@
     <div>
       Your car should get:
       <span id="result" />
+    </div> -->
+    <hr />
+    <h2>FaceMesh</h1>
+    <div style="position: relative;">
+      <canvas id="canvas" width="600" height="500"></canvas>
+      <video
+        id="video"
+        className="size"
+        autoplay
+        playsinline
+        muted
+        width="600"
+        height="500"
+      ></video>
     </div>
+    
   </body>
 </html>
