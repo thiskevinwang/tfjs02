@@ -26,47 +26,56 @@ export interface TensorData {
   labelMin: tf.Tensor<tf.Rank>;
 }
 
-type XYZ = [number, number, number];
+export type Coord2D = [number, number];
+export type Coord3D = [number, number, number];
+export type Coords3D = Coord3D[];
 
-interface Annotation {
-  leftCheek: XYZ[];
-  leftEyeLower0: XYZ[];
-  leftEyeLower1: XYZ[];
-  leftEyeLower2: XYZ[];
-  leftEyeLower3: XYZ[];
-  leftEyeUpper0: XYZ[];
-  leftEyeUpper1: XYZ[];
-  leftEyeUpper2: XYZ[];
-  leftEyebrowLower: XYZ[];
-  leftEyebrowUpper: XYZ[];
-  lipsLowerInner: XYZ[];
-  lipsLowerOuter: XYZ[];
-  lipsUpperInner: XYZ[];
-  lipsUpperOuter: XYZ[];
-  midwayBetweenEyes: XYZ[];
-  noseBottom: XYZ[];
-  noseLeftCorner: XYZ[];
-  noseRightCorner: XYZ[];
-  noseTip: XYZ[];
-  rightCheek: XYZ[];
-  rightEyeLower0: XYZ[];
-  rightEyeLower1: XYZ[];
-  rightEyeLower2: XYZ[];
-  rightEyeLower3: XYZ[];
-  rightEyeUpper0: XYZ[];
-  rightEyeUpper1: XYZ[];
-  rightEyeUpper2: XYZ[];
-  rightEyebrowLower: XYZ[];
-  rightEyebrowUpper: XYZ[];
-  silhouette: XYZ[];
-}
-export interface FacePrediction {
-  annotations: Annotation;
-  boundingBox: {
-    bottomRight: XYZ;
-    topLeft: XYZ;
-  };
+export interface AnnotatedPredictionValues {
+  /** Probability of the face detection. */
   faceInViewConfidence: number;
-  mesh: XYZ[];
-  scaledMesh: XYZ[];
+  boundingBox: {
+    /** The upper left-hand corner of the face. */
+    topLeft: Coord2D;
+    /** The lower right-hand corner of the face. */
+    bottomRight: Coord2D;
+  };
+  /** Facial landmark coordinates. */
+  mesh: Coords3D;
+  /** Facial landmark coordinates normalized to input dimensions. */
+  scaledMesh: Coords3D;
+  /** Annotated keypoints. */
+  annotations?: MeshAnnotations;
+}
+
+interface MeshAnnotations {
+  leftCheek: number[];
+  leftEyeLower0: number[];
+  leftEyeLower1: number[];
+  leftEyeLower2: number[];
+  leftEyeLower3: number[];
+  leftEyeUpper0: number[];
+  leftEyeUpper1: number[];
+  leftEyeUpper2: number[];
+  leftEyebrowLower: number[];
+  leftEyebrowUpper: number[];
+  lipsLowerInner: number[];
+  lipsLowerOuter: number[];
+  lipsUpperInner: number[];
+  lipsUpperOuter: number[];
+  midwayBetweenEyes: number[];
+  noseBottom: number[];
+  noseLeftCorner: number[];
+  noseRightCorner: number[];
+  noseTip: number[];
+  rightCheek: number[];
+  rightEyeLower0: number[];
+  rightEyeLower1: number[];
+  rightEyeLower2: number[];
+  rightEyeLower3: number[];
+  rightEyeUpper0: number[];
+  rightEyeUpper1: number[];
+  rightEyeUpper2: number[];
+  rightEyebrowLower: number[];
+  rightEyebrowUpper: number[];
+  silhouette: number[];
 }

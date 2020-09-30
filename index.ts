@@ -1,12 +1,18 @@
 console.log("%cTensorFlow", "color:rebeccapurple; font-size:50px");
 
+import * as assert from "assert";
 import * as tf from "@tensorflow/tfjs";
 import * as tfvis from "@tensorflow/tfjs-vis";
 
 /* @ts-ignore */
 import * as facemesh from "@tensorflow-models/facemesh";
 
-import type { Car, CleanedData, TensorData, FacePrediction } from "./types";
+import type {
+  Car,
+  CleanedData,
+  TensorData,
+  AnnotatedPredictionValues,
+} from "./types";
 
 enum Tabs {
   DATA = "Data",
@@ -343,7 +349,7 @@ async function run() {
     inputs
   );
 
-  await trainModel(model, inputs, labels);
+  // await trainModel(model, inputs, labels);
 
   // Make some predictions using the model and compare them to the original data
   testModel(model, data, tensorData);
@@ -404,6 +410,31 @@ async function main() {
     HtmlIds.VIDEO
   ) as HTMLVideoElement;
 
+  const image: tf.Tensor4D = tf.tidy(() => {
+    const tensor = tf.browser.fromPixels(videoElement);
+    return tensor.toFloat().expandDims(0);
+  });
+
+  // assert.deepStrictEqual(
+  //   image,
+  //   {
+  //     dataId: {},
+  //     dtype: "float32",
+  //     id: 302,
+  //     isDisposedInternal: false,
+  //     kept: false,
+  //     rankType: "4",
+  //     scopeId: 214,
+  //     shape: [1, 480, 640, 3],
+  //     size: 921600,
+  //     strides: [921600, 1920, 3],
+  //     isDisposed: false,
+  //     rank: 4,
+  //   },
+  //   "image is not equal to ___"
+  // );
+  console.log({ image });
+
   /**
    * This  will get called recursively
    */
@@ -411,8 +442,13 @@ async function main() {
     // Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
     // array of detected faces from the MediaPipe graph.
     console.log("model.estimateFaces()");
-    const predictions: FacePrediction[] = await model.estimateFaces(
-      videoElement
+    /**
+     * # estimateFaces
+     * @see https://github.com/tensorflow/tfjs-models/blob/master/facemesh/src/index.ts#L204-L301
+     */
+    const predictions: AnnotatedPredictionValues[] = await model.estimateFaces(
+      videoElement,
+      true
     );
     console.log("predictions", predictions);
 
@@ -477,7 +513,8 @@ async function main() {
       detectFrame(video, model);
     });
   };
-  detectFrame(videoElement, model);
+  // detectFrame(videoElement, model);
+  renderPredictions();
 
   console.groupEnd();
 }
