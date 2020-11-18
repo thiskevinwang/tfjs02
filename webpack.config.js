@@ -23,6 +23,7 @@ module.exports = {
   },
   devServer: {
     contentBase: dist,
+    port: 8081,
   },
   plugins: [new CopyPlugin([path.resolve(__dirname, "static")])],
 };
